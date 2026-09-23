@@ -9,7 +9,7 @@ function database(): PDO
     }
 
     $host = getenv('DB_HOST') ?: 'localhost';
-    $name = getenv('DB_NAME') ?: 'u784172357_moneytrack';
+    $name = getenv('DB_NAME') ?: 'moneytrack';
     $user = getenv('DB_USER') ?: 'root';
     $pass = getenv('DB_PASS') ?: '';
     if ($name === '' || $user === '') {
