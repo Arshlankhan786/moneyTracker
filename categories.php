@@ -1,0 +1,1 @@
+<?php $pageTitle='Categories'; $activePage='categories'; require __DIR__ . '/includes/app_page.php';

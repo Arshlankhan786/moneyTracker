@@ -1,0 +1,1 @@
+<?php $pageTitle='Money Insights'; $activePage='insights'; require __DIR__ . '/includes/app_page.php';

@@ -1,0 +1,7 @@
+<?php
+declare(strict_types=1);
+require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/auth.php';
+require_guest();
+$error = $_SESSION['auth_error'] ?? null; unset($_SESSION['auth_error']);
+?><!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Log in · MoneyTrack</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="assets/css/style.css"></head><body><main class="auth-page"><a class="brand auth-brand" href="index.php"><span class="brand-mark">↗</span>MoneyTrack</a><section class="auth-card"><p class="eyebrow">WELCOME BACK</p><h1>Pick up your money story.</h1><p class="subheading">Log in to see what stayed with you.</p><?php if ($error): ?><div class="form-error"><?= e($error) ?></div><?php endif; ?><form method="post" action="api/index.php"><input type="hidden" name="action" value="login"><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><label>Email<input type="email" name="email" required autocomplete="email"></label><label>Password<input type="password" name="password" required autocomplete="current-password"></label><button class="primary-button full-width" type="submit">Log in <i class="bi bi-arrow-up-right"></i></button></form><p class="auth-switch">New to MoneyTrack? <a href="register.php">Create an account</a></p></section></main></body></html>

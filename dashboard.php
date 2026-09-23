@@ -1,0 +1,1 @@
+<?php $pageTitle='Dashboard'; $activePage='dashboard'; require __DIR__ . '/includes/app_page.php';

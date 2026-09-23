@@ -1,0 +1,1 @@
+<?php $pageTitle='My Month'; $activePage='monthly'; require __DIR__ . '/includes/app_page.php';
