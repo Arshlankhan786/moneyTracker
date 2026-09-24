@@ -36,7 +36,7 @@ try {
         }
         if ($action === 'transactions') {
             $type = in_array($_GET['type'] ?? '', ['income', 'expense'], true) ? $_GET['type'] : null;
-            $sql = 'SELECT t.id, t.type, t.amount, t.note, t.transaction_date, c.name category_name, c.icon, c.color FROM transactions t JOIN categories c ON c.id=t.category_id WHERE t.user_id=? AND t.transaction_date BETWEEN ? AND ?';
+            $sql = 'SELECT t.id, t.type, t.amount, t.note, t.transaction_date, c.name category_name, c.icon, c.color, c.parent_id cat_parent_id, pc.name parent_name, pc.icon parent_icon FROM transactions t JOIN categories c ON c.id=t.category_id LEFT JOIN categories pc ON pc.id=c.parent_id WHERE t.user_id=? AND t.transaction_date BETWEEN ? AND ?';
             $params = [$userId, $from, $to];
             if ($type) { $sql .= ' AND t.type=?'; $params[] = $type; }
             $sql .= ' ORDER BY t.transaction_date DESC, t.created_at DESC LIMIT 200';
@@ -51,6 +51,13 @@ try {
             $stmt = database()->prepare('SELECT c.id, c.name, c.icon, c.color, SUM(t.amount) total FROM transactions t JOIN categories c ON c.id=t.category_id WHERE t.user_id=? AND t.type="income" AND t.transaction_date BETWEEN ? AND ? GROUP BY c.id ORDER BY total DESC');
             $stmt->execute([$userId, $from, $to]);
             json_response(true, 'Insights loaded.', ['summary' => $summary, 'expenses' => $expenses, 'income' => $stmt->fetchAll()]);
+        }
+        if ($action === 'subcategories') {
+            $parentId = (int)($_GET['parent_id'] ?? 0);
+            if (!$parentId) action_fail('Parent category is required.');
+            $parent = category_for_user($parentId, $userId);
+            if (!$parent) action_fail('Category not found.', 404);
+            json_response(true, 'Subcategories loaded.', category_children($parentId, $userId));
         }
         action_fail('Unknown data request.', 404);
     }
@@ -86,31 +93,76 @@ try {
     }
 
     $userId = require_auth();
+
     if ($action === 'create_category' || $action === 'update_category') {
-        $name = trim((string)($_POST['name'] ?? '')); $type = (string)($_POST['type'] ?? '');
-        $icon = trim((string)($_POST['icon'] ?? '💰')); $color = (string)($_POST['color'] ?? '#6366F1'); $id = (int)($_POST['id'] ?? 0);
+        $name = trim((string)($_POST['name'] ?? ''));
+        $type = (string)($_POST['type'] ?? '');
+        $icon = trim((string)($_POST['icon'] ?? '💰'));
+        $color = (string)($_POST['color'] ?? '#6366F1');
+        $id = (int)($_POST['id'] ?? 0);
+        $parentId = ($_POST['parent_id'] ?? '') !== '' ? (int)$_POST['parent_id'] : null;
         if ($name === '' || mb_strlen($name) > 80) action_fail('Please enter a category name.');
         if (!in_array($type, ['income', 'expense'], true)) action_fail('Choose a valid category type.');
         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) action_fail('Choose a valid category color.');
-        if ($action === 'create_category') {
-            $stmt = database()->prepare('INSERT INTO categories (user_id, name, type, icon, color) VALUES (?, ?, ?, ?, ?)');
-            try { $stmt->execute([$userId, $name, $type, $icon, $color]); } catch (PDOException $exception) { if ($exception->getCode() === '23000') action_fail('You already have a category with that name.'); throw $exception; }
-            json_response(true, $name . ' added ✓', ['id' => database()->lastInsertId()]);
+        /* ── Subcategory validation ── */
+        if ($parentId !== null) {
+            $parent = category_for_user($parentId, $userId);
+            if (!$parent) action_fail('Parent category not found.');
+            if (!$parent['is_active']) action_fail('Parent category is archived.');
+            if ($parent['type'] !== $type) action_fail('Subcategory must match parent category type.');
+            if ($parent['parent_id'] !== null) action_fail('Cannot nest subcategories more than one level deep.');
         }
-        $category = category_for_user($id, $userId); if (!$category) action_fail('That category no longer exists.', 404);
-        $stmt = database()->prepare('UPDATE categories SET name=?, type=?, icon=?, color=? WHERE id=? AND user_id=?'); $stmt->execute([$name, $type, $icon, $color, $id, $userId]);
+        if ($action === 'update_category' && $parentId !== null && $parentId === $id) action_fail('A category cannot be its own parent.');
+        /* ── PHP-level duplicate check (NULL-safe, unlike MySQL UNIQUE with NULLs) ── */
+        $excludeId = $action === 'update_category' ? $id : null;
+        if (check_duplicate_category($userId, $name, $type, $parentId, $excludeId)) action_fail('You already have a category with that name.');
+        if ($action === 'create_category') {
+            $stmt = database()->prepare('INSERT INTO categories (user_id, parent_id, name, type, icon, color) VALUES (?, ?, ?, ?, ?, ?)');
+            $stmt->execute([$userId, $parentId, $name, $type, $icon, $color]);
+            $newCat = category_for_user((int)database()->lastInsertId(), $userId);
+            json_response(true, $name . ' added ✓', $newCat);
+        }
+        $category = category_for_user($id, $userId);
+        if (!$category) action_fail('That category no longer exists.', 404);
+        $stmt = database()->prepare('UPDATE categories SET name=?, type=?, icon=?, color=?, parent_id=? WHERE id=? AND user_id=?');
+        $stmt->execute([$name, $type, $icon, $color, $parentId, $id, $userId]);
         json_response(true, 'Category updated.');
     }
+
     if ($action === 'archive_category') {
-        $id = (int)($_POST['id'] ?? 0); if (!category_for_user($id, $userId)) action_fail('That category no longer exists.', 404);
-        $stmt = database()->prepare('UPDATE categories SET is_active=0 WHERE id=? AND user_id=?'); $stmt->execute([$id, $userId]); json_response(true, 'Category archived.');
+        $id = (int)($_POST['id'] ?? 0);
+        if (!category_for_user($id, $userId)) action_fail('That category no longer exists.', 404);
+        /* Archive the category AND all its subcategories in one query */
+        $stmt = database()->prepare('UPDATE categories SET is_active=0 WHERE (id=? OR parent_id=?) AND user_id=?');
+        $stmt->execute([$id, $id, $userId]);
+        json_response(true, 'Category archived.');
     }
+
+    if ($action === 'restore_category') {
+        $id = (int)($_POST['id'] ?? 0);
+        $cat = category_for_user($id, $userId);
+        if (!$cat) action_fail('That category no longer exists.', 404);
+        if ($cat['parent_id'] !== null) {
+            $parentCat = category_for_user((int)$cat['parent_id'], $userId);
+            if (!$parentCat || !$parentCat['is_active']) action_fail('Activate the parent category first.');
+        }
+        $stmt = database()->prepare('UPDATE categories SET is_active=1 WHERE id=? AND user_id=?');
+        $stmt->execute([$id, $userId]);
+        json_response(true, 'Category restored.');
+    }
+
     if (in_array($action, ['create_transaction', 'update_transaction'], true)) {
         $type = (string)($_POST['type'] ?? ''); $amount = (float)($_POST['amount'] ?? 0); $categoryId = (int)($_POST['category_id'] ?? 0); $date = (string)($_POST['transaction_date'] ?? ''); $note = trim((string)($_POST['note'] ?? '')); $id = (int)($_POST['id'] ?? 0);
         if (!in_array($type, ['income', 'expense'], true)) action_fail('Choose money in or money out.');
         if ($amount <= 0 || $amount > 9999999999) action_fail('Please enter an amount greater than zero.');
         if (!validate_date($date)) action_fail('Please choose a valid date.');
-        $category = category_for_user($categoryId, $userId, $type); if (!$category || !$category['is_active']) action_fail('That category no longer exists.');
+        $category = category_for_user($categoryId, $userId, $type);
+        if (!$category || !$category['is_active']) action_fail('That category no longer exists.');
+        /* If subcategory, ensure parent is also active */
+        if ($category['parent_id'] !== null) {
+            $parentCat = category_for_user((int)$category['parent_id'], $userId);
+            if (!$parentCat || !$parentCat['is_active']) action_fail('The parent category is no longer available.');
+        }
         if ($action === 'create_transaction') {
             $stmt = database()->prepare('INSERT INTO transactions (user_id, category_id, type, amount, note, transaction_date) VALUES (?, ?, ?, ?, ?, ?)'); $stmt->execute([$userId, $categoryId, $type, number_format($amount, 2, '.', ''), $note ?: null, $date]); json_response(true, ($type === 'income' ? '+' : '−') . rupees($amount) . ($type === 'income' ? ' added' : ' recorded') . ' successfully.');
         }

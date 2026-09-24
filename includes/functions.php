@@ -85,7 +85,7 @@ function validate_date(string $date): bool
 
 function category_for_user(int $categoryId, int $userId, ?string $type = null): ?array
 {
-    $sql = 'SELECT id, name, type, icon, color, is_active FROM categories WHERE id = ? AND user_id = ?';
+    $sql = 'SELECT id, parent_id, name, type, icon, color, is_active FROM categories WHERE id = ? AND user_id = ?';
     $params = [$categoryId, $userId];
     if ($type) { $sql .= ' AND type = ?'; $params[] = $type; }
     $stmt = database()->prepare($sql . ' LIMIT 1');
@@ -115,11 +115,39 @@ function all_time_balance(int $userId): float
 
 function user_categories(int $userId, ?string $type = null, bool $activeOnly = true): array
 {
-    $sql = 'SELECT id, name, type, icon, color, is_active, created_at FROM categories WHERE user_id = ?';
+    $sql = 'SELECT id, parent_id, name, type, icon, color, is_active, created_at FROM categories WHERE user_id = ?';
     $params = [$userId];
     if ($type) { $sql .= ' AND type = ?'; $params[] = $type; }
     if ($activeOnly) $sql .= ' AND is_active = 1';
-    $stmt = database()->prepare($sql . ' ORDER BY type, name');
+    $stmt = database()->prepare($sql . ' ORDER BY type, parent_id IS NOT NULL, name');
     $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+function check_duplicate_category(int $userId, string $name, string $type, ?int $parentId, ?int $excludeId = null): bool
+{
+    $sql = 'SELECT id FROM categories WHERE user_id = ? AND LOWER(name) = LOWER(?) AND type = ?';
+    $params = [$userId, $name, $type];
+    if ($parentId === null) {
+        $sql .= ' AND parent_id IS NULL';
+    } else {
+        $sql .= ' AND parent_id = ?';
+        $params[] = $parentId;
+    }
+    if ($excludeId) {
+        $sql .= ' AND id != ?';
+        $params[] = $excludeId;
+    }
+    $stmt = database()->prepare($sql . ' LIMIT 1');
+    $stmt->execute($params);
+    return (bool) $stmt->fetch();
+}
+
+function category_children(int $parentId, int $userId, bool $activeOnly = true): array
+{
+    $sql = 'SELECT id, parent_id, name, type, icon, color, is_active FROM categories WHERE parent_id = ? AND user_id = ?';
+    if ($activeOnly) $sql .= ' AND is_active = 1';
+    $stmt = database()->prepare($sql . ' ORDER BY name');
+    $stmt->execute([$parentId, $userId]);
     return $stmt->fetchAll();
 }

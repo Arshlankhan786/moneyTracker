@@ -1804,3 +1804,365 @@ select {
         width: 100%
     }
 }
+
+/* ═══════════════════════════════════════════
+   Category Selector (Transaction Drawer)
+   ═══════════════════════════════════════════ */
+
+.cat-selector {
+    display: grid;
+    gap: 14px
+}
+
+.cat-label {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0;
+    font-weight: 600
+}
+
+.cat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+    gap: 10px
+}
+
+.cat-card {
+    display: grid;
+    place-items: center;
+    gap: 8px;
+    padding: 18px 10px 15px;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: all .22s ease;
+    min-height: 88px;
+    text-align: center;
+    position: relative
+}
+
+.cat-card:hover {
+    border-color: color-mix(in srgb, var(--cat-color, var(--insight)) 55%, var(--border));
+    transform: translateY(-3px);
+    background: color-mix(in srgb, var(--cat-color, var(--insight)) 8%, var(--surface));
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .18)
+}
+
+.cat-card:active {
+    transform: translateY(0);
+    transition-duration: .08s
+}
+
+.cat-card-icon {
+    font-size: 28px;
+    line-height: 1;
+    transition: transform .2s
+}
+
+.cat-card:hover .cat-card-icon {
+    transform: scale(1.12)
+}
+
+.cat-card-name {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--muted);
+    transition: color .2s
+}
+
+.cat-card:hover .cat-card-name {
+    color: var(--text)
+}
+
+.cat-card-add {
+    border-style: dashed;
+    border-color: rgba(37, 45, 58, .9);
+    color: var(--quiet)
+}
+
+.cat-card-add:hover {
+    color: var(--text);
+    border-color: var(--insight);
+    background: rgba(99, 102, 241, .08)
+}
+
+.cat-card-add .cat-card-icon {
+    font-size: 20px;
+    color: var(--quiet)
+}
+
+.cat-card-add:hover .cat-card-icon {
+    color: var(--lavender)
+}
+
+.cat-card-parent-only {
+    border-style: dashed;
+    opacity: .8
+}
+
+.cat-card-parent-only:hover {
+    opacity: 1
+}
+
+/* ─── Subcategory panel ─── */
+
+.cat-sub {
+    animation: catSlideIn .22s ease
+}
+
+@keyframes catSlideIn {
+    from { opacity: 0; transform: translateX(16px) }
+    to   { opacity: 1; transform: none }
+}
+
+.cat-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 6px 0;
+    cursor: pointer;
+    margin-bottom: 4px;
+    transition: color .2s
+}
+
+.cat-back:hover {
+    color: var(--income-soft)
+}
+
+/* ─── Chosen category display ─── */
+
+.cat-chosen {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border: 1.5px solid color-mix(in srgb, var(--income) 40%, var(--border));
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--income) 6%, var(--surface));
+    animation: catSlideIn .2s ease
+}
+
+.cat-chosen-info {
+    display: flex;
+    align-items: center;
+    gap: 12px
+}
+
+.cat-chosen-icon {
+    font-size: 26px;
+    line-height: 1
+}
+
+.cat-chosen-info b {
+    display: block;
+    font-size: 14px
+}
+
+.cat-chosen-path {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px
+}
+
+.cat-change {
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    padding: 7px 13px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s
+}
+
+.cat-change:hover {
+    border-color: var(--insight);
+    color: var(--text);
+    background: rgba(99, 102, 241, .08)
+}
+
+/* ═══════════════════════════════════════════
+   Category Tree (Management Page)
+   ═══════════════════════════════════════════ */
+
+.cat-tree-list {
+    display: grid;
+    gap: 8px
+}
+
+.cat-tree-item {
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background: var(--card);
+    overflow: hidden;
+    transition: border-color .2s
+}
+
+.cat-tree-item:hover {
+    border-color: color-mix(in srgb, var(--category-color, var(--insight)) 45%, var(--border))
+}
+
+.cat-tree-parent {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 16px;
+    background: var(--card)
+}
+
+.cat-tree-parent .category-symbol {
+    flex: none
+}
+
+.cat-tree-info {
+    flex: 1;
+    display: grid;
+    gap: 3px
+}
+
+.cat-tree-info b {
+    font-size: 15px
+}
+
+.cat-tree-info small {
+    font-size: 11px;
+    color: var(--muted)
+}
+
+.cat-tree-actions {
+    display: flex;
+    gap: 4px;
+    align-items: center
+}
+
+.cat-tree-children {
+    padding: 0 16px 14px;
+    display: grid;
+    gap: 4px;
+    border-top: 1px solid rgba(37, 45, 58, .6);
+    margin-top: -1px;
+    padding-top: 12px
+}
+
+.cat-tree-child {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    transition: background .2s
+}
+
+.cat-tree-child:hover {
+    background: rgba(255, 255, 255, .04)
+}
+
+.tree-connector {
+    width: 16px;
+    height: 16px;
+    border-left: 1.5px solid var(--border);
+    border-bottom: 1.5px solid var(--border);
+    border-radius: 0 0 0 6px;
+    flex: none;
+    margin-left: 6px
+}
+
+.cat-child-icon {
+    font-size: 18px;
+    flex: none
+}
+
+.cat-child-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500
+}
+
+.cat-tree-child .cat-tree-actions {
+    opacity: 0;
+    transition: opacity .2s
+}
+
+.cat-tree-child:hover .cat-tree-actions {
+    opacity: 1
+}
+
+.cat-add-sub-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px dashed rgba(37, 45, 58, .8);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--quiet);
+    padding: 10px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all .2s;
+    margin-top: 4px
+}
+
+.cat-add-sub-inline:hover {
+    border-color: var(--insight);
+    color: var(--lavender);
+    background: rgba(99, 102, 241, .06)
+}
+
+/* ═══════════════════════════════════════════
+   Mobile Responsive — Category UI
+   ═══════════════════════════════════════════ */
+
+@media(max-width:650px) {
+    .cat-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px
+    }
+
+    .cat-card {
+        padding: 14px 8px 12px;
+        min-height: 80px;
+        border-radius: 12px
+    }
+
+    .cat-card-icon {
+        font-size: 24px
+    }
+
+    .cat-card-name {
+        font-size: 10px
+    }
+
+    .cat-chosen {
+        padding: 12px 13px
+    }
+
+    .cat-chosen-icon {
+        font-size: 22px
+    }
+
+    .cat-tree-parent {
+        padding: 14px 12px;
+        gap: 10px
+    }
+
+    .cat-tree-info b {
+        font-size: 14px
+    }
+
+    .cat-tree-child .cat-tree-actions {
+        opacity: 1
+    }
+
+    .cat-tree-child {
+        padding: 8px 8px
+    }
+}
